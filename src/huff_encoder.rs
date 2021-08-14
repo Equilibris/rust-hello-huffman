@@ -1,16 +1,8 @@
-use crate::binary_tree::BinaryTree;
+use crate::types::*;
 use crate::utils::math::num_bits;
-use priority_queue::PriorityQueue;
-use std::collections::hash_map::RandomState;
-use std::collections::HashMap;
-
-type Symbol = char;
-
-type CharMap = HashMap<Symbol, u32>;
-type Queue = PriorityQueue<BinaryTree<Symbol>, i32, RandomState>;
 
 // Done
-fn frequency_extractor(input: &String) -> CharMap {
+pub fn frequency_extractor(input: &String) -> CharMap {
     let mut map = CharMap::with_capacity(128);
 
     for chr in input.chars() {
@@ -28,24 +20,24 @@ fn frequency_extractor(input: &String) -> CharMap {
     map
 }
 
-fn build_queue(char_map: CharMap) -> Queue {
-    let mut queue = PriorityQueue::with_capacity(char_map.len());
+pub fn build_queue(char_map: CharMap) -> Queue {
+    let mut queue = Queue::with_capacity(char_map.len());
 
     for (key, value) in char_map {
-        queue.push(BinaryTree::Leaf(key), (value as i32) * -1);
+        queue.push(Tree::Leaf(key), (value as i32) * -1);
     }
 
     queue
 }
 
 // Done
-fn build_tree(queue: &mut Queue) -> BinaryTree<Symbol> {
+pub fn build_tree(queue: &mut Queue) -> Tree {
     loop {
         match (queue.pop(), queue.pop()) {
             (Some((output, _)), None) => break output,
             (Some((left, left_priority)), Some((right, right_priority))) => {
                 queue.push(
-                    BinaryTree::Node(Box::new(left), Box::new(right)),
+                    Tree::Node(Box::new(left), Box::new(right)),
                     left_priority + right_priority,
                 );
             }
@@ -56,11 +48,11 @@ fn build_tree(queue: &mut Queue) -> BinaryTree<Symbol> {
     }
 }
 
-fn internal_build_inverse_char_map(tree: &BinaryTree<Symbol>, base_sum: u32) -> CharMap {
+fn internal_build_inverse_char_map(tree: &Tree, base_sum: u32) -> CharMap {
     let mut map = CharMap::new();
 
     match tree {
-        &BinaryTree::Leaf(ref key) => {
+        &Tree::Leaf(ref key) => {
             let insert_value = ((base_sum << 1) + 1) << base_sum.leading_zeros() - 1;
             let insert_value = insert_value << 1;
             println!(
@@ -72,7 +64,7 @@ fn internal_build_inverse_char_map(tree: &BinaryTree<Symbol>, base_sum: u32) -> 
 
             map.insert(*key, insert_value);
         }
-        &BinaryTree::Node(ref left, ref right) => {
+        &Tree::Node(ref left, ref right) => {
             let next_base_sum = base_sum << 1;
 
             map.extend(
@@ -84,7 +76,7 @@ fn internal_build_inverse_char_map(tree: &BinaryTree<Symbol>, base_sum: u32) -> 
 
     map
 }
-fn build_inverse_char_map(tree: &BinaryTree<Symbol>) -> CharMap {
+pub fn build_inverse_char_map(tree: &Tree) -> CharMap {
     internal_build_inverse_char_map(tree, 1)
 }
 
@@ -152,11 +144,11 @@ pub fn encoder(input: String) {
 mod tests {
     use crate::huff_encoder::*;
 
-    const test_str: &str = "Lorem ipsum dolor sit amet, consectetur adipiscing elit.";
+    const TEST_STR: &str = "Lorem ipsum dolor sit amet, consectetur adipiscing elit.";
 
     #[test]
     fn it_extracts_frequencies() {
-        let test_string: String = String::from(test_str);
+        let test_string: String = String::from(TEST_STR);
 
         let frequencies = frequency_extractor(&test_string);
 
@@ -188,28 +180,28 @@ mod tests {
     }
 
     // #[test]
-    fn it_builds_the_optimal_queue() {
-        todo!();
+    // fn it_builds_the_optimal_queue() {
+    //     todo!();
 
-        use itertools::Itertools;
+    //     use itertools::Itertools;
 
-        let test_string: String = String::from(test_str);
+    //     let test_string: String = String::from(test_str);
 
-        let frequencies = frequency_extractor(&test_string);
+    //     let frequencies = frequency_extractor(&test_string);
 
-        let mut queue = build_queue(frequencies);
+    //     let mut queue = build_queue(frequencies);
 
-        // for (key, priority) in frequencies
-        //     .into_iter()
-        //     .sorted_by_key(|(_, priority)| -(*priority as i32))
-        // {
-        //     assert_eq!(queue.pop(), Some((BinaryTree::Leaf(key), -(priority as i32))))
-        // }
-    }
+    //     // for (key, priority) in frequencies
+    //     //     .into_iter()
+    //     //     .sorted_by_key(|(_, priority)| -(*priority as i32))
+    //     // {
+    //     //     assert_eq!(queue.pop(), Some((Tree::Leaf(key), -(priority as i32))))
+    //     // }
+    // }
 
     #[test]
     fn it_has_unambiguous_inverse_char_map() {
-        let test_string: String = String::from(test_str);
+        let test_string: String = String::from(TEST_STR);
 
         let frequencies = frequency_extractor(&test_string);
 

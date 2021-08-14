@@ -2,6 +2,7 @@
 #![feature(vec_into_raw_parts)]
 mod binary_tree;
 mod huff_encoder;
+mod types;
 mod utils;
 
 pub use crate::huff_encoder::*;
