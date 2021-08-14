@@ -5,6 +5,31 @@ pub enum BinaryTree<T> {
 }
 
 impl<T> BinaryTree<T> {
+    pub fn left(&self) -> Option<&Box<Self>> {
+        use BinaryTree::Node;
+
+        match self {
+            Node(left, _) => Option::Some(left),
+            _ => Option::None,
+        }
+    }
+    pub fn right(&self) -> Option<&Box<Self>> {
+        use BinaryTree::Node;
+
+        match self {
+            Node(_, right) => Option::Some(right),
+            _ => Option::None,
+        }
+    }
+
+    pub fn is_leaf(&self) -> bool {
+        use BinaryTree::Leaf;
+        match self {
+            Leaf(_) => true,
+            _ => false,
+        }
+    }
+
     #[allow(dead_code)]
     pub fn leaf_value(&self) -> Option<&T> {
         use BinaryTree::Leaf;
