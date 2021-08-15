@@ -55,12 +55,6 @@ fn internal_build_inverse_char_map(tree: &Tree, base_sum: u32) -> CharMap {
         &Tree::Leaf(ref key) => {
             let insert_value = ((base_sum << 1) + 1) << base_sum.leading_zeros() - 1;
             let insert_value = insert_value << 1;
-            println!(
-                "ins: {:#034b} b sum: {:b} bx sum: {:b}",
-                insert_value,
-                base_sum,
-                ((base_sum << 1) + 1)
-            );
 
             map.insert(*key, insert_value);
         }
@@ -80,6 +74,95 @@ pub fn build_inverse_char_map(tree: &Tree) -> CharMap {
     internal_build_inverse_char_map(tree, 1)
 }
 
+macro_rules! push_bits {
+    ($vec:expr, $bit_cursor:expr, $byte_cursor:expr, $value:expr, $size:expr) => {{
+        for (index, val) in $value.to_be_bytes().iter().enumerate() {
+            let val = *val;
+            $vec[$byte_cursor + index * (val > 0) as usize] |= val;
+        }
+
+        $bit_cursor += $size;
+        $byte_cursor += ($bit_cursor) as usize / 8;
+        $bit_cursor %= 8;
+    }};
+}
+
+// Tree symbols
+// 00 = leaf
+// 01 = node followed by leaf
+// 10 = node followed by node
+// 11 = node followed by 2 leafs (localized root)
+
+/*
+10   01        'd'  01        'q'  10   11        'C'       'f'   01        'D'  01        ';'  11        'M'       'L'        00   'n'
+Node(Node(Leaf('d'),Node(Leaf('q'),Node(Node(Leaf('C'),Leaf('f')),Node(Leaf('D'),Node(Leaf(';'),Node(Leaf('M'),Leaf('L'))))))),Leaf('n'))
+*/
+
+pub fn encode_tree_iteration(
+    node: &Tree,
+    bit_cursor: &mut u16,
+    byte_cursor: &mut usize,
+    vec: &mut Vec<u8>,
+) {
+    if vec.len() + 4 > *byte_cursor {
+        vec.extend([0; 8]);
+    }
+    match node {
+        Tree::Leaf(val) => {
+            let val = ((*val) as u16) << 8 >> *bit_cursor;
+
+            for (index, val) in val.to_be_bytes().iter().enumerate() {
+                vec[*byte_cursor + index] |= *val;
+            }
+            *byte_cursor += 1;
+        }
+        Tree::Node(left, right) => {
+            if node.is_localized_root() {
+                let val = (0b1100000000000000 as u16) >> *bit_cursor;
+
+                push_bits!(vec, *bit_cursor, *byte_cursor, val, 2);
+
+                encode_tree_iteration(left, bit_cursor, byte_cursor, vec);
+                encode_tree_iteration(right, bit_cursor, byte_cursor, vec);
+            } else if left.is_leaf() {
+                let val = (0b0100000000000000 as u16) >> *bit_cursor;
+
+                push_bits!(vec, *bit_cursor, *byte_cursor, val, 2);
+
+                encode_tree_iteration(left, bit_cursor, byte_cursor, vec);
+                encode_tree_iteration(right, bit_cursor, byte_cursor, vec);
+            } else {
+                let val = (0b1000000000000000 as u16) >> *bit_cursor;
+
+                push_bits!(vec, *bit_cursor, *byte_cursor, val, 2);
+
+                encode_tree_iteration(left, bit_cursor, byte_cursor, vec);
+
+                if right.is_leaf() {
+                    let val = (0b0000000000000000 as u16) >> *bit_cursor;
+
+                    push_bits!(vec, *bit_cursor, *byte_cursor, val, 2);
+                }
+
+                encode_tree_iteration(right, bit_cursor, byte_cursor, vec);
+            }
+        }
+    }
+}
+
+pub fn encode_tree(tree: &Tree) -> Vec<u8> {
+    let mut vec = vec![0 as u8; 32];
+
+    let mut bit_cursor: u16 = 0;
+    let mut byte_cursor: usize = 0;
+
+    encode_tree_iteration(tree, &mut bit_cursor, &mut byte_cursor, &mut vec);
+
+    vec.resize(byte_cursor + (bit_cursor > 0) as usize, 0);
+
+    vec
+}
+
 pub fn encode_string(map: CharMap, input_string: String) -> (Vec<u8>, usize) {
     let mut vec = vec![0 as u8; input_string.len()];
 
@@ -91,8 +174,6 @@ pub fn encode_string(map: CharMap, input_string: String) -> (Vec<u8>, usize) {
     for symbol in input_string.chars() {
         match map.get(&symbol) {
             Some(symbol) => {
-                // println!("Bit: {}  Byte: {}", bit_cursor, byte_cursor);
-
                 let symbol = *symbol;
 
                 let symbol_size = num_bits::<u32>() - (symbol.trailing_zeros() + 1) as usize;
@@ -101,16 +182,7 @@ pub fn encode_string(map: CharMap, input_string: String) -> (Vec<u8>, usize) {
 
                 let symbol = symbol >> (trailing + 1) << trailing + 1;
 
-                // println!("{:#034b} {}", symbol, symbol_size);
-
-                for (index, byte) in symbol.to_be_bytes().iter().enumerate() {
-                    vec[byte_cursor + index * ((byte_cursor + index < len) as usize)] |= *byte;
-                }
-
-                bit_cursor += symbol_size;
-
-                byte_cursor += bit_cursor / 8;
-                bit_cursor %= 8;
+                push_bits!(vec, bit_cursor, byte_cursor, symbol, symbol_size);
             }
             None => panic!("Symbol map lacking symbol {}", symbol),
         }
@@ -128,8 +200,6 @@ pub fn encoder(input: String) {
 
     let tree = build_tree(&mut queue);
 
-    println!("{:#?}", tree);
-
     let inverse_char_map = build_inverse_char_map(&tree);
 
     let (out, bit_offset) = encode_string(inverse_char_map, input);
@@ -137,7 +207,6 @@ pub fn encoder(input: String) {
     for i in out {
         print!("{:08b} ", i);
     }
-    print!("-{}-", bit_offset);
 }
 
 #[cfg(test)]
@@ -145,6 +214,19 @@ mod tests {
     use crate::huff_encoder::*;
 
     const TEST_STR: &str = "Lorem ipsum dolor sit amet, consectetur adipiscing elit.";
+
+    #[test]
+    fn experiments() {
+        let mut vec = vec![0 as u8; 10];
+        let mut bit_cursor: usize = 0;
+        let mut byte_cursor: usize = 0;
+
+        let value: u16 = 0xFFFF;
+
+        push_bits!(vec, bit_cursor, byte_cursor, value, 16);
+
+        println!("{:?} {} {}", vec, bit_cursor, byte_cursor);
+    }
 
     #[test]
     fn it_extracts_frequencies() {
@@ -213,6 +295,21 @@ mod tests {
 
         for (char, key) in inverse_char_map.into_iter() {
             println!("{}: {:#032b}", char, key);
+        }
+    }
+
+    #[test]
+    fn it_encodes_tree() {
+        let input = String::from(TEST_STR);
+
+        let frequencies = frequency_extractor(&input);
+
+        let mut queue = build_queue(frequencies);
+
+        let tree = build_tree(&mut queue);
+
+        for i in encode_tree(&tree) {
+            print!("{:08b}", i);
         }
     }
 }
