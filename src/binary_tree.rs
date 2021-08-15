@@ -5,6 +5,23 @@ pub enum BinaryTree<T> {
 }
 
 impl<T> BinaryTree<T> {
+    pub fn unwrap_left(&self) -> &Box<Self> {
+        use BinaryTree::Node;
+
+        match self {
+            Node(left, _) => left,
+            _ => panic!("Attempted a node unwrap on a leaf value"),
+        }
+    }
+    pub fn unwrap_right(&self) -> &Box<Self> {
+        use BinaryTree::Node;
+
+        match self {
+            Node(_, right) => right,
+            _ => panic!("Attempted a node unwrap on a leaf value"),
+        }
+    }
+
     pub fn left(&self) -> Option<&Box<Self>> {
         use BinaryTree::Node;
 
@@ -22,6 +39,14 @@ impl<T> BinaryTree<T> {
         }
     }
 
+    pub fn is_localized_root(&self) -> bool {
+        use BinaryTree::Node;
+
+        match self {
+            Node(left, right) => left.is_leaf() && right.is_leaf(),
+            _ => false,
+        }
+    }
     pub fn is_leaf(&self) -> bool {
         use BinaryTree::Leaf;
         match self {
@@ -30,13 +55,21 @@ impl<T> BinaryTree<T> {
         }
     }
 
-    #[allow(dead_code)]
     pub fn leaf_value(&self) -> Option<&T> {
         use BinaryTree::Leaf;
 
         match self {
             Leaf(val) => Option::Some(val),
             _ => Option::None,
+        }
+    }
+
+    pub fn unwrap(&self) -> &T {
+        use BinaryTree::Leaf;
+
+        match self {
+            Leaf(val) => val,
+            _ => panic!("Attempted unwrap of node"),
         }
     }
 }
