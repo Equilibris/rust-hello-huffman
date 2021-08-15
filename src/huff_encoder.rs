@@ -1,3 +1,5 @@
+use crate::header::Header;
+use crate::push_bits;
 use crate::types::*;
 use crate::utils::math::num_bits;
 
@@ -74,19 +76,6 @@ pub fn build_inverse_char_map(tree: &Tree) -> CharMap {
     internal_build_inverse_char_map(tree, 1)
 }
 
-macro_rules! push_bits {
-    ($vec:expr, $bit_cursor:expr, $byte_cursor:expr, $value:expr, $size:expr) => {{
-        for (index, val) in $value.to_be_bytes().iter().enumerate() {
-            let val = *val;
-            $vec[$byte_cursor + index * (val > 0) as usize] |= val;
-        }
-
-        $bit_cursor += $size;
-        $byte_cursor += ($bit_cursor) as usize / 8;
-        $bit_cursor %= 8;
-    }};
-}
-
 // Tree symbols
 // 00 = leaf
 // 01 = node followed by leaf
@@ -98,7 +87,7 @@ macro_rules! push_bits {
 Node(Node(Leaf('d'),Node(Leaf('q'),Node(Node(Leaf('C'),Leaf('f')),Node(Leaf('D'),Node(Leaf(';'),Node(Leaf('M'),Leaf('L'))))))),Leaf('n'))
 */
 
-pub fn encode_tree_iteration(
+fn encode_tree_iteration(
     node: &Tree,
     bit_cursor: &mut u16,
     byte_cursor: &mut usize,
@@ -169,8 +158,6 @@ pub fn encode_string(map: CharMap, input_string: String) -> (Vec<u8>, usize) {
     let mut bit_cursor: usize = 0;
     let mut byte_cursor: usize = 0;
 
-    let len = vec.len();
-
     for symbol in input_string.chars() {
         match map.get(&symbol) {
             Some(symbol) => {
@@ -193,20 +180,32 @@ pub fn encode_string(map: CharMap, input_string: String) -> (Vec<u8>, usize) {
     (vec, bit_cursor)
 }
 
-pub fn encoder(input: String) {
+pub fn encoder(input: String) -> Vec<u8> {
     let frequencies = frequency_extractor(&input);
 
     let mut queue = build_queue(frequencies);
 
     let tree = build_tree(&mut queue);
 
+    let encoded_tree = encode_tree(&tree);
+
     let inverse_char_map = build_inverse_char_map(&tree);
 
-    let (out, bit_offset) = encode_string(inverse_char_map, input);
+    let (encoded_string, bit_offset) = encode_string(inverse_char_map, input);
 
-    for i in out {
-        print!("{:08b} ", i);
-    }
+    let header = Header::new(
+        bit_offset as u8,
+        encoded_tree.len() as u32,
+        encoded_string.len() as u32,
+    );
+
+    let mut output = Vec::with_capacity(encoded_tree.len() + encoded_string.len() + 8);
+
+    output.extend(header.serialize());
+    output.extend(encoded_tree);
+    output.extend(encoded_string);
+
+    output
 }
 
 #[cfg(test)]

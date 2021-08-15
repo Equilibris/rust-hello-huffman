@@ -26,11 +26,20 @@ pub struct Header {
 }
 
 impl Header {
-    pub fn new_from_raw(raw: u64) -> Self {
-        Self::new(Version::new((raw >> 60) as u8), raw)
+    pub fn new(offset: u8, symbol_size: u32, content_size: u32) -> Self {
+        Self {
+            version: Version::V1,
+            offset,
+            symbol_size,
+            content_size,
+        }
     }
 
-    pub fn new(version: Version, content: u64) -> Self {
+    pub fn from_raw(raw: u64) -> Self {
+        Self::from(Version::new((raw >> 60) as u8), raw)
+    }
+
+    pub fn from(version: Version, content: u64) -> Self {
         match version {
             // Check if this is correct
             Version::V1 => Self {
@@ -45,11 +54,12 @@ impl Header {
     // Header Layout:
     // Vers offB     Symbols-Size     Content size (max 4.294967296gb)
     // 0000 0000 00000000000000000000 00000000000000000000000000000000
-    pub fn serialize(&self) -> u64 {
-        (((*self).version.serialize() as u64) << 60)
+    pub fn serialize(&self) -> [u8; 8] {
+        ((((*self).version.serialize() as u64) << 60)
             | (((*self).offset as u64) << 60 >> 4)
             | (((*self).symbol_size as u64) << 40 >> 8)
-            | ((*self).content_size as u64)
+            | ((*self).content_size as u64))
+            .to_be_bytes()
     }
 }
 

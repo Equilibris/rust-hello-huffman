@@ -36,3 +36,26 @@ pub mod math {
         }
     }
 }
+
+#[macro_export]
+macro_rules! push_bits {
+    ($vec:expr, $bit_cursor:expr, $byte_cursor:expr, $value:expr, $size:expr) => {{
+        use crate::bit_byte_increase;
+
+        for (index, val) in $value.to_be_bytes().iter().enumerate() {
+            let val = *val;
+            $vec[$byte_cursor + index * (val > 0) as usize] |= val;
+        }
+
+        bit_byte_increase!($bit_cursor, $byte_cursor, $size);
+    }};
+}
+
+#[macro_export]
+macro_rules! bit_byte_increase {
+    ($bit_cursor:expr, $byte_cursor:expr, $size:expr) => {{
+        $bit_cursor += $size;
+        $byte_cursor += ($bit_cursor) as usize / 8;
+        $bit_cursor %= 8;
+    }};
+}
