@@ -42,13 +42,13 @@ pub fn decode_string(final_bit_offset: usize, tree: Tree, data: Vec<u8>) -> Stri
 
 #[cfg(test)]
 mod tests {
-    const TEST_DATA: &'static str = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec nec elementum arcu, et consequat odio. Nam at velit feugiat, hendrerit leo a, sagittis magna. Donec sit amet sapien sed urna condimentum dapibus in id nibh. Etiam suscipit aliquam egestas. Nunc sit amet condimentum dui. Sed sodales massa nec elit tristique aliquam. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Duis at massa accumsan, condimentum erat in, porta ex. Curabitur a nisi ac augue tincidunt egestas. Sed ut venenatis lacus. Vestibulum et lectus eu mauris semper ornare sit amet at felis. Maecenas sed augue eu elit pharetra iaculis maximus vel sapien. Suspendisse quis neque mollis, aliquet tellus in, ultricies enim. Ut ut eros venenatis, mollis nisi a, convallis massa. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Suspendisse rutrum magna vitae augue viverra sagittis.";
+    const TEST_STR: &'static str = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec nec elementum arcu, et consequat odio. Nam at velit feugiat, hendrerit leo a, sagittis magna. Donec sit amet sapien sed urna condimentum dapibus in id nibh. Etiam suscipit aliquam egestas. Nunc sit amet condimentum dui. Sed sodales massa nec elit tristique aliquam. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Duis at massa accumsan, condimentum erat in, porta ex. Curabitur a nisi ac augue tincidunt egestas. Sed ut venenatis lacus. Vestibulum et lectus eu mauris semper ornare sit amet at felis. Maecenas sed augue eu elit pharetra iaculis maximus vel sapien. Suspendisse quis neque mollis, aliquet tellus in, ultricies enim. Ut ut eros venenatis, mollis nisi a, convallis massa. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Suspendisse rutrum magna vitae augue viverra sagittis.";
 
     use crate::huff_decoder::*;
     use crate::huff_encoder::*;
     #[test]
     fn it_decodes_string() {
-        let input = String::from(TEST_DATA);
+        let input = String::from(TEST_STR);
 
         let frequencies = frequency_extractor(&input);
 
@@ -62,6 +62,6 @@ mod tests {
 
         let output = decode_string(bit_offset, tree, out);
 
-        assert_eq!(output, String::from(TEST_DATA));
+        assert_eq!(output, String::from(TEST_STR));
     }
 }
