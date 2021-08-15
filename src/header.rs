@@ -1,9 +1,10 @@
+#[derive(Debug)]
 pub enum Version {
     V1,
 }
 
 impl Version {
-    pub fn new(bytes: u8) -> Version {
+    pub fn from_raw(bytes: u8) -> Version {
         match bytes {
             0 => Version::V1,
             _ => todo!(),
@@ -13,16 +14,17 @@ impl Version {
         use self::Version::*;
 
         match self {
-            v1 => 0,
+            V1 => 0,
         }
     }
 }
 
+#[derive(Debug)]
 pub struct Header {
-    version: Version,
-    offset: u8,
-    symbol_size: u32,
-    content_size: u32,
+    pub version: Version,
+    pub offset: u8,
+    pub symbol_size: u32,
+    pub content_size: u32,
 }
 
 impl Header {
@@ -36,7 +38,7 @@ impl Header {
     }
 
     pub fn from_raw(raw: u64) -> Self {
-        Self::from(Version::new((raw >> 60) as u8), raw)
+        Self::from(Version::from_raw((raw >> 60) as u8), raw)
     }
 
     pub fn from(version: Version, content: u64) -> Self {

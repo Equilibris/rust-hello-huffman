@@ -1,4 +1,5 @@
 use crate::bit_byte_increase;
+use crate::header::Header;
 use crate::types::*;
 
 pub fn decode_string(final_bit_offset: usize, tree: Tree, data: Vec<u8>) -> String {
@@ -98,6 +99,23 @@ pub fn decode_tree(data: Vec<u8>) -> Tree {
     decode_tree_iteration(&data, &mut bit_cursor, &mut byte_cursor)
 }
 
+pub fn decoder(data: Vec<u8>) -> String {
+    let header = Header::from_raw(u64::from_be_bytes([
+        data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7],
+    ]));
+
+    let header_end = (header.symbol_size as usize) + 8;
+    let content_end = (header.content_size as usize) + header_end;
+
+    let tree = decode_tree(data[8..header_end].to_vec());
+
+    decode_string(
+        header.offset as usize,
+        tree,
+        data[header_end..content_end].to_vec(),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     const TEST_STR: &'static str = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec nec elementum arcu, et consequat odio. Nam at velit feugiat, hendrerit leo a, sagittis magna. Donec sit amet sapien sed urna condimentum dapibus in id nibh. Etiam suscipit aliquam egestas. Nunc sit amet condimentum dui. Sed sodales massa nec elit tristique aliquam. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Duis at massa accumsan, condimentum erat in, porta ex. Curabitur a nisi ac augue tincidunt egestas. Sed ut venenatis lacus. Vestibulum et lectus eu mauris semper ornare sit amet at felis. Maecenas sed augue eu elit pharetra iaculis maximus vel sapien. Suspendisse quis neque mollis, aliquet tellus in, ultricies enim. Ut ut eros venenatis, mollis nisi a, convallis massa. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Suspendisse rutrum magna vitae augue viverra sagittis.";
@@ -186,5 +204,16 @@ mod tests {
 
             do_tree_test(tree);
         }
+    }
+
+    #[test]
+    fn it_decodes() {
+        let input = String::from(TEST_STR);
+
+        let encoded = encoder(input);
+
+        let decoded = decoder(encoded);
+
+        assert_eq!(decoded, String::from(TEST_STR));
     }
 }
