@@ -25,7 +25,7 @@ where:
 		default as FILENAME.nhm in decode mode and rhm in
 		encode mode.
 
-		EXAMPLE:
+		EXAMPLES:
 			hello.txt:output.txt
 			hello.rhm (outputs hello.rhm.nhm)
 
